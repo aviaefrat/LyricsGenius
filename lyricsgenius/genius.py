@@ -237,7 +237,52 @@ class Genius(API, PublicAPI):
         result_artist = clean_str(result['primary_artist']['name'])
         return title_is_match and result_artist == clean_str(artist)
 
-    def song_annotations(self, song_id, text_format=None):
+    def all_song_annotations(self, song_id, text_format='plain', per_page=10):
+        """Return song's annotations with associated fragment in list of tuple.
+
+        Args:
+            song_id (:obj:`int`): song ID
+            text_format (:obj:`str`, optional): Text format of the results
+                ('dom', 'html', 'markdown' or 'plain').
+
+        Note:
+            * :meth:`Genius.song_annotations` returns at most `per_page` annotations, as it does
+            not use pagination.
+            * :meth:`Genius.song_annotations` notes "Some fragments may have more than one
+            annotation, because sometimes both artists and Genius users annotate them"
+            However, I did not encounter this, even when both annotations are present in the webpage
+            e.g. https://genius.com/7854343. I tried all 'dom', 'html', 'markdown' or 'plain'
+            `text_formats`s.
+        """
+
+        # get all referents
+        page = 1
+        all_referents = list()
+        while True:
+            referents = self.referents(song_id=song_id, text_format=text_format,
+                                       per_page=per_page, page=page)
+            referents = referents["referents"]
+            all_referents.extend(referents)
+
+            if len(referents) != per_page:
+                break
+            page += 1
+
+        # extract annotated bars from referents
+        annotated_bars = []
+        for r in all_referents:
+            bar = r["fragment"]
+            annotations = r["annotations"]
+
+            if len(annotations) > 1:
+                print(f"Multiple annotations for {r['api_path']}")
+
+            annotation = annotations[0]
+            annotation_text = annotation["body"][text_format]
+            annotated_bars.append((bar, annotation_text))
+        return annotated_bars
+
+    def song_annotations(self, song_id, text_format=None, per_page=50):
         """Return song's annotations with associated fragment in list of tuple.
 
         Args:
