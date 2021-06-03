@@ -237,7 +237,7 @@ class Genius(API, PublicAPI):
         result_artist = clean_str(result['primary_artist']['name'])
         return title_is_match and result_artist == clean_str(artist)
 
-    def all_song_annotations(self, song_id, text_format='plain', per_page=10):
+    def all_song_annotations(self, song_id, text_format='plain', per_page=50):
         """Return song's annotations with associated fragment in list of tuple.
 
         Args:
@@ -250,9 +250,10 @@ class Genius(API, PublicAPI):
             not use pagination.
             * :meth:`Genius.song_annotations` notes "Some fragments may have more than one
             annotation, because sometimes both artists and Genius users annotate them"
-            However, I did not encounter this, even when both annotations are present in the webpage
-            e.g. https://genius.com/7854343. I tried all 'dom', 'html', 'markdown' or 'plain'
-            `text_formats`s.
+            I did not encounter this in https://genius.com/7854343, where both annotations
+            are present  I tried all 'dom', 'html', 'markdown' or 'plain' `text_format`s.
+            I did encounter that in https://genius.com/10841292.
+            As behaviour is inconsistent, I ignore bars with multiple annotations.
         """
 
         # get all referents
@@ -276,6 +277,8 @@ class Genius(API, PublicAPI):
 
             if len(annotations) > 1:
                 print(f"Multiple annotations for {r['api_path']}")
+                # todo save only non-writer annotation. change docstring accordingly.
+                continue
 
             annotation = annotations[0]
             annotation_text = annotation["body"][text_format]
